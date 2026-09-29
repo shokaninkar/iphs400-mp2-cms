@@ -9,16 +9,22 @@ them here. Keep this file small.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 
 from app import settings
+from app.db import init_db
+from app.routes import auth
 
 templates = Jinja2Templates(directory=str(settings.TEMPLATES))
 
 
-def create_app() -> FastAPI:
+def create_app(db_path: Path | None = None) -> FastAPI:
     app = FastAPI(title="IPHS 400 MP2 CMS")
+    app.state.db_path = db_path or settings.DATABASE_PATH
+    init_db(app.state.db_path)
 
     @app.get("/admin")
     def admin_home(request: Request):
@@ -33,6 +39,7 @@ def create_app() -> FastAPI:
             {"title": settings.SITE_TITLE, "items": []},
         )
 
+    app.include_router(auth.router)
     # Your ticket work plugs in here, e.g.
     #   from app.routes import posts
     #   app.include_router(posts.router)

@@ -72,6 +72,12 @@ considered and rejected as the meaning of "Posts").
 - "Posts" = Notes (admissions tips/blog), not client-results spotlights — a deliberate
   override of the recommended default in the grill session.
 
+- **CSRF and the login form (T01):** the login form does not require a CSRF token.
+  There is no prior session for a forged request to ride on, and
+  `tests/conftest.py`'s `client_as` fixture — used by every role-based test from T02
+  onward — logs in without one. CSRF tokens are required starting with the first
+  authenticated, state-changing form (T03's Note creation onward).
+
 ## Open facts (not yet resolved — do not invent)
 
 - Whether Notes ever get categories/tags (stretch goal only, not MVP).
