@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 
 from app import settings
+from app.security import hash_password
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -32,3 +33,12 @@ def init_db(path: Path | str | None = None) -> None:
         conn.commit()
     finally:
         conn.close()
+
+
+def seed_user(conn: sqlite3.Connection, email: str, password: str, role: str) -> None:
+    """Idempotent: safe to call every time seed_demo.py or a test fixture runs."""
+    conn.execute(
+        "INSERT OR IGNORE INTO users (email, password_hash, role) VALUES (?, ?, ?)",
+        (email, hash_password(password), role),
+    )
+    conn.commit()

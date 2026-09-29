@@ -11,11 +11,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.templating import Jinja2Templates
 
 from app import settings
 from app.db import init_db
+from app.deps import require_role
 from app.routes import auth
 
 templates = Jinja2Templates(directory=str(settings.TEMPLATES))
@@ -27,9 +28,12 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     init_db(app.state.db_path)
 
     @app.get("/admin")
-    def admin_home(request: Request):
+    def admin_home(
+        request: Request,
+        user=Depends(require_role("admin", "editor")),
+    ):
         return templates.TemplateResponse(
-            request, "admin/hello.html", {"title": "Admin"}
+            request, "admin/hello.html", {"title": "Admin", "user": user}
         )
 
     @app.get("/")

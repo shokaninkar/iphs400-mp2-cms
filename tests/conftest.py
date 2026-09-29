@@ -16,9 +16,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db import get_connection, init_db
+from app.db import get_connection, init_db, seed_user
 from app.main import create_app
-from app.security import hash_password
 
 # Matches scripts/seed_demo.py. Passwords come from the environment there; in
 # tests they are fixed and meaningless.
@@ -32,12 +31,7 @@ def _seed_demo_users(db_path) -> None:
     conn = get_connection(db_path)
     try:
         for role, info in DEMO_USERS.items():
-            conn.execute(
-                "INSERT OR IGNORE INTO users (email, password_hash, role) "
-                "VALUES (?, ?, ?)",
-                (info["email"], hash_password(info["password"]), role),
-            )
-        conn.commit()
+            seed_user(conn, info["email"], info["password"], role)
     finally:
         conn.close()
 

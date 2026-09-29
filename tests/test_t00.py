@@ -6,9 +6,13 @@ door.
 
 
 def test_admin_console_answers(client):
-    response = client.get("/admin")
-    assert response.status_code == 200
-    assert "hello admin" in response.text.lower()
+    """T02 gated /admin behind login (spec: anonymous -> redirected, not 404
+    or 500). Updated from the original "reaches the hello page unauthenticated"
+    assertion, which describes T00's pre-auth state, not a permanent contract —
+    the front door still answers, it now answers with a redirect to /login."""
+    response = client.get("/admin", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
 
 
 def test_public_home_answers(client):

@@ -4,7 +4,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Iterator
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 
 from app.db import get_connection
 from app.security import SESSION_COOKIE, read_session_token
@@ -31,3 +31,19 @@ def get_current_user(
         "SELECT * FROM users WHERE id = ? AND is_active = 1", (data["user_id"],)
     ).fetchone()
     return row
+
+
+def require_role(*roles: str):
+    """FastAPI dependency factory: anonymous -> redirect to login, wrong role
+    -> 403. Two different failure modes on purpose (T02 acceptance criteria)."""
+
+    def dependency(
+        user: sqlite3.Row | None = Depends(get_current_user),
+    ) -> sqlite3.Row:
+        if user is None:
+            raise HTTPException(status_code=303, headers={"Location": "/login"})
+        if user["role"] not in roles:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return user
+
+    return dependency
