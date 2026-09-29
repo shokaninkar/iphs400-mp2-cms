@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Notes — Admin{% endblock %}
+{% block content %}
+  <h1>Notes</h1>
+  <p><a href="/admin/notes/new">+ New Note</a></p>
+  <ul>
+  {% for note in notes %}
+    <li>
+      <strong>{{ note["title"] }}</strong> ({{ note["status"] }})
+      <div>{{ note["body_md"] | markdown | safe }}</div>
+      <a href="/admin/notes/{{ note['id'] }}/edit">Edit</a>
+      {% if user["role"] == "admin" %}
+        {% if note["status"] == "draft" %}
+        <form method="post" action="/admin/notes/{{ note['id'] }}/publish" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">Publish</button>
+        </form>
+        {% else %}
+        <form method="post" action="/admin/notes/{{ note['id'] }}/unpublish" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">Unpublish</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/admin/notes/{{ note['id'] }}/delete" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">Delete</button>
+        </form>
+      {% endif %}
+    </li>
+  {% else %}
+    <li>No Notes yet.</li>
+  {% endfor %}
+  </ul>
+{% endblock %}

@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 from app import settings
 from app.db import init_db
 from app.deps import require_role
-from app.routes import auth
+from app.routes import auth, notes
 
 templates = Jinja2Templates(directory=str(settings.TEMPLATES))
 
@@ -44,9 +44,7 @@ def create_app(db_path: Path | None = None) -> FastAPI:
         )
 
     app.include_router(auth.router)
-    # Your ticket work plugs in here, e.g.
-    #   from app.routes import posts
-    #   app.include_router(posts.router)
+    app.include_router(notes.router)
     return app
 
 

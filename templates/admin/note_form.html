@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Note" if note else "New Note" }} — Admin{% endblock %}
+{% block content %}
+  <h1>{{ "Edit Note" if note else "New Note" }}</h1>
+  <form method="post" action="{{ ('/admin/notes/' ~ note['id']) if note else '/admin/notes' }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p><label>Title<br>
+      <input name="title" value="{{ note['title'] if note else '' }}" required>
+    </label></p>
+    <p><label>Slug<br>
+      <input name="slug" value="{{ note['slug'] if note else '' }}" required>
+    </label></p>
+    <p><label>Body (Markdown)<br>
+      <textarea name="body_md" rows="10" cols="60">{{ note['body_md'] if note else '' }}</textarea>
+    </label></p>
+    <button type="submit">Save draft</button>
+  </form>
+{% endblock %}

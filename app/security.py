@@ -6,6 +6,8 @@ role. Signed cookies can be read by the client but not forged without SECRET_KEY
 """
 from __future__ import annotations
 
+import secrets
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -31,7 +33,11 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def create_session_token(user_id: int, role: str) -> str:
-    return _serializer.dumps({"user_id": user_id, "role": role})
+    """The csrf field is a random token minted once at login and carried in the
+    signed cookie — every state-changing form (T03 onward) echoes it back."""
+    return _serializer.dumps(
+        {"user_id": user_id, "role": role, "csrf": secrets.token_urlsafe(24)}
+    )
 
 
 def read_session_token(token: str) -> dict | None:
