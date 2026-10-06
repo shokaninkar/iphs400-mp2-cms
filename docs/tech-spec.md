@@ -1,6 +1,6 @@
 # Tech Spec — inkadmissions CMS
 
-**Status:** T01–T03 implemented and closed; T04–T07 planned.
+**Status:** T01–T04 implemented and closed; T05–T07 planned.
 **Source of truth for requirements:** [spec issue #1](https://github.com/shokaninkar/iphs400-mp2-cms/issues/1). This document is the engineering-facing companion — architecture and data model detail the spec issue deliberately leaves out.
 
 ## 1. Overview
@@ -33,7 +33,7 @@ Client context, vocabulary, and the decisions behind this design live in [`CONTE
 │  FastAPI app (app/main.py)                                                  │
 │    ├─ app/routes/auth.py    — /login, /logout                               │
 │    ├─ app/routes/notes.py   — /admin/notes/*                                │
-│    ├─ app/routes/pages.py   — /admin/pages/*        (T04, planned)          │
+│    ├─ app/routes/pages.py   — /admin/pages/*        (T04)                   │
 │    ├─ app/routes/users.py   — /admin/users/*        (T06, planned)          │
 │    └─ app/deps.py           — get_db, get_session, require_role, verify_csrf│
 │                                     │                                        │
@@ -49,7 +49,7 @@ Client context, vocabulary, and the decisions behind this design live in [`CONTE
                           gh-pages branch → GitHub Pages
 ```
 
-No ORM (ADR-002): raw `sqlite3`, `conn.row_factory = sqlite3.Row`. One `Jinja2Templates` instance per route module currently (see T03 code-review note on `templates.env.filters` — worth consolidating if T04/T05 need the same filter).
+No ORM (ADR-002): raw `sqlite3`, `conn.row_factory = sqlite3.Row`. One shared `Jinja2Templates` instance in `app/templating.py` (T04), with the `markdown` filter registered once; every route module imports it.
 
 ## 4. Data model
 
@@ -82,7 +82,7 @@ One table for both Pages and Notes, discriminated by `type`. Pages additionally 
 | Create/edit own Note (draft) | ✅ | ✅ |
 | Edit another user's Note | ✅ | ❌ (403) |
 | Publish/unpublish/delete a Note | ✅ | ❌ (403) |
-| Create/edit/delete a Page | ✅ | ❌ (403) — planned T04 |
+| Create/edit/publish/delete a Page | ✅ | ❌ (403) |
 | Create/edit users, deactivate | ✅ | ❌ (403) — planned T06 |
 | Anonymous → any `/admin/*` route | redirected to `/login` | redirected to `/login` |
 
@@ -103,7 +103,8 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 | POST | `/admin/notes/{id}/publish` | admin | T03 | ✅ |
 | POST | `/admin/notes/{id}/unpublish` | admin | T03 | ✅ |
 | POST | `/admin/notes/{id}/delete` | admin | T03 | ✅ |
-| GET/POST | `/admin/pages*` | admin | T04 | planned |
+| GET/POST | `/admin/pages*` | admin | T04 | ✅ |
+| GET | `/pages/{slug}.html` (published only, else 404) | anonymous | T04 | ✅ |
 | GET | `/admin/dashboard`, list filters | admin, editor | T05 | planned |
 | GET/POST | `/admin/users*` | admin | T06 | planned |
 | — | `cms publish` CLI | — | T07 | planned (stub exists) |
@@ -112,16 +113,18 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 
 - **D1 Password hashing:** argon2 (`app/security.py`), never logged or stored plain.
 - **D2 CSRF:** every state-changing form beyond `/login` requires a token minted at login and carried in the signed session cookie (`app/deps.py::verify_csrf`). `/login` is the one documented exception — no prior session exists for a forged request to ride on, and `tests/conftest.py`'s `client_as` fixture (used by every role test) depends on token-free login.
-- **D3 Access control:** `require_role` dependency, tested per route (T02/T03 tests; T04/T06 will extend coverage as those routes land).
+- **D3 Access control:** `require_role` dependency, tested per route (T02–T04 tests; T06 will extend coverage when its routes land).
 - **D4 Sanitized Markdown:** `nh3.clean()` default allowlist strips `<script>` and `on*` attributes before any Note/Page body reaches a template (`app/markdown.py`). Verified directly against the library before writing app code.
 - **D5 No secrets committed:** `cms.db` and `.env` gitignored; verified via `check_submission.py`'s history grep.
 
 ## 8. Testing strategy
 
-Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 40/40 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_ctx_guard.py`, `test_usage_report.py`).
+Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 47/47 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_pages.py`, `test_ctx_guard.py`, `test_usage_report.py`).
 
 ## 9. Open questions / risks
 
-- `templates.env.filters["markdown"]` is registered inside `app/routes/notes.py` — fine with one shared `Jinja2Templates` instance, but should move to a single shared template-setup module before T04/T05 add their own filters or template instances.
+- ~~Per-module `Jinja2Templates` instances~~ — resolved in T04: `app/templating.py` holds the single instance and the `markdown` filter. Still open for T07: `app/publish.py::environment()` is a separate Jinja `Environment` without the `markdown` filter; it must register it (or share the setup) before rendering `public/page.html`.
+- T07 should own the "only published Pages, by `nav_order`" query in one place (currently inline in `app/main.py`'s `/`), and add site-wide Page navigation to `base.html` — T04 lists published Pages on the home page only.
+- Duplicate slug on create/edit (Notes and Pages) raises an unhandled `sqlite3.IntegrityError` (500) from `UNIQUE(type, slug)` — tracked as a follow-up issue.
 - The `Notes` list currently shows a fully-rendered body inline; T05's "Markdown preview" requirement may want a distinct, possibly JS-driven preview instead — worth revisiting when T05 starts.
 - Session/usage-ledger hooks (`decide()`, `spend()`) are implemented and tested, but only fire for real when Claude Code's project root is this repo — see `docs/process/compaction-log.md` for the note on why T01–T03's sessions didn't populate real ledger data.

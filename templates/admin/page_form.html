@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Page" if page else "New Page" }} — Admin{% endblock %}
+{% block content %}
+  <h1>{{ "Edit Page" if page else "New Page" }}</h1>
+  <form method="post" action="{{ ('/admin/pages/' ~ page['id']) if page else '/admin/pages' }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p><label>Title<br>
+      <input name="title" value="{{ page['title'] if page else '' }}" required>
+    </label></p>
+    <p><label>Slug<br>
+      <input name="slug" value="{{ page['slug'] if page else '' }}" required>
+    </label></p>
+    <p><label>Nav order<br>
+      <input name="nav_order" type="number" value="{{ page['nav_order'] if page else 0 }}">
+    </label></p>
+    <p><label>Body (Markdown)<br>
+      <textarea name="body_md" rows="10" cols="60">{{ page['body_md'] if page else '' }}</textarea>
+    </label></p>
+    <button type="submit">Save</button>
+  </form>
+{% endblock %}

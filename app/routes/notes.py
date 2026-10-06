@@ -10,15 +10,11 @@ import sqlite3
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 
-from app import settings
 from app.deps import get_db, get_session, require_role, verify_csrf
-from app.markdown import render_markdown
+from app.templating import templates
 
 router = APIRouter(prefix="/admin/notes")
-templates = Jinja2Templates(directory=str(settings.TEMPLATES))
-templates.env.filters["markdown"] = render_markdown
 
 
 def _visible_notes(conn: sqlite3.Connection, user: sqlite3.Row) -> list[sqlite3.Row]:

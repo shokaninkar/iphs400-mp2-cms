@@ -13,9 +13,7 @@ import sqlite3
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 
-from app import settings
 from app.deps import get_db
 from app.security import (
     SESSION_COOKIE,
@@ -23,9 +21,9 @@ from app.security import (
     create_session_token,
     verify_password,
 )
+from app.templating import templates
 
 router = APIRouter()
-templates = Jinja2Templates(directory=str(settings.TEMPLATES))
 
 
 @router.get("/login")
