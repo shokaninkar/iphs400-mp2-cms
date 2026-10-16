@@ -64,7 +64,7 @@ docs/           tech-spec, ADRs, handoffs, transcripts, screenshots, report
 notes/          field notes, client brief, token budget plan, usage ledger
 ```
 
-Spec: issue #1. Tickets: issues #2–#9, each closed by a `TNN: ... Closes #N` commit after
+Spec: issue #1. Tickets: issues #2–#10, each closed by a `TNN: ... Closes #N` commit after
 its `/code-review` findings were posted on the issue.
 
 ## Generative AI Use Statement

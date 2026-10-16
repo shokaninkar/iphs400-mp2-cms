@@ -1,6 +1,6 @@
 # Tech Spec — inkadmissions CMS
 
-**Status:** T01–T04, T06, T07 and #9 implemented; T05 planned.
+**Status:** T01–T07, #9 and T10 (#10, admin styling and a friendly 403 page) implemented. Tagged `mp2-final`.
 **Source of truth for requirements:** [spec issue #1](https://github.com/shokaninkar/iphs400-mp2-cms/issues/1). This document is the engineering-facing companion — architecture and data model detail the spec issue deliberately leaves out.
 
 ## 1. Overview
@@ -107,7 +107,9 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 | GET/POST | `/admin/pages*` | admin | T04 | ✅ |
 | GET | `/pages/{slug}.html` (published only, else 404) | anonymous | T04 | ✅ |
 | GET | `/notes/index.html`, `/notes/{slug}.html` (live preview of the export) | anonymous | T07 | ✅ |
-| GET | `/admin/dashboard`, list filters | admin, editor | T05 | planned |
+| GET | `/admin` (dashboard counts), `/admin/content?type=&status=` (filterable list) | admin, editor | T05 | ✅ |
+| POST | `/admin/preview` (live Markdown preview, sanitized) | admin, editor | T05 | ✅ |
+| — | any 403 renders `admin/forbidden.html` with a link back to the dashboard | — | T10 | ✅ |
 | GET/POST | `/admin/users*` | admin | T06 | ✅ |
 | — | `cms publish` CLI → `site/` (index, `pages/`, `notes/`, style.css) | — | T07 | ✅ |
 
@@ -115,13 +117,13 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 
 - **D1 Password hashing:** argon2 (`app/security.py`), never logged or stored plain.
 - **D2 CSRF:** every state-changing form beyond `/login` requires a token minted at login and carried in the signed session cookie (`app/deps.py::verify_csrf`). `/login` is the one documented exception — no prior session exists for a forged request to ride on, and `tests/conftest.py`'s `client_as` fixture (used by every role test) depends on token-free login.
-- **D3 Access control:** `require_role` dependency, tested per route (T02–T04 and T06 tests).
+- **D3 Access control:** `require_role` dependency, tested per route (T02–T06 tests); a wrong role gets 403, anonymous gets 303 to `/login`.
 - **D4 Sanitized Markdown:** `nh3.clean()` default allowlist strips `<script>` and `on*` attributes before any Note/Page body reaches a template (`app/markdown.py`). Verified directly against the library before writing app code.
 - **D5 No secrets committed:** `cms.db` and `.env` gitignored; verified via `check_submission.py`'s history grep.
 
 ## 8. Testing strategy
 
-Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 49/49 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_pages.py`, `test_ctx_guard.py`, `test_usage_report.py`).
+Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 101/101 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_pages.py`, `test_dashboard.py`, `test_users.py`, `test_publish.py`, `test_admin_ui.py`, `test_ctx_guard.py`, `test_usage_report.py`).
 
 ## 9. Open questions / risks
 
@@ -129,5 +131,5 @@ Route-level tests via `fastapi.testclient.TestClient`, not internal-function moc
 - ~~Published-content queries inline in `app/main.py`; no site-wide nav~~ — resolved in T07: `app/content.py` owns the published Pages/Notes queries for both `cms publish` and the live preview, and `base.html` renders nav from published Pages.
 - Slugs are file names in `site/`, so T07 restricts them to `[a-z0-9]` with single hyphens (`app/content.py::SAFE_SLUG`), checked on the Note/Page forms (422) and again at export.
 - ~~Duplicate slug on create/edit (Notes and Pages) raises an unhandled `sqlite3.IntegrityError` (500)~~ — resolved in T09 (#9): the form re-renders with a 409 and an error; other integrity errors still propagate.
-- The `Notes` list currently shows a fully-rendered body inline; T05's "Markdown preview" requirement may want a distinct, possibly JS-driven preview instead — worth revisiting when T05 starts.
+- ~~The `Notes` list shows a fully-rendered body inline; T05's "Markdown preview" may want a distinct preview~~ — resolved in T05: the Note/Page editor has a preview pane, server-rendered first and refreshed as you type via `/admin/preview`.
 - Session/usage-ledger hooks (`decide()`, `spend()`) are implemented and tested, but only fire for real when Claude Code's project root is this repo — see `docs/process/compaction-log.md` for the note on why T01–T03's sessions didn't populate real ledger data.
