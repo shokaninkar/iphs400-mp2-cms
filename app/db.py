@@ -33,6 +33,11 @@ CREATE TABLE IF NOT EXISTS content (
 """
 
 
+def is_duplicate_slug(exc: sqlite3.IntegrityError) -> bool:
+    """True only for the content table's UNIQUE(type, slug), not other constraints."""
+    return "UNIQUE constraint failed: content.type, content.slug" in str(exc)
+
+
 def get_connection(path: Path | str | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(path or settings.DATABASE_PATH)
     conn.row_factory = sqlite3.Row

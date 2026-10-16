@@ -182,3 +182,45 @@ def test_notes_persist_across_a_fresh_db_connection(client_as, tmp_path):
     finally:
         conn.close()
     assert row is not None
+
+
+def test_duplicate_note_slug_rerenders_the_form_with_an_error(client_as, tmp_path):
+    editor = client_as("editor")
+    token = _csrf(editor)
+    for slug in ("first", "second"):
+        editor.post("/admin/notes", data={
+            "title": slug, "slug": slug, "body_md": "x", "csrf_token": token,
+        })
+
+    created = editor.post("/admin/notes", data={
+        "title": "Copy", "slug": "first", "body_md": "kept", "csrf_token": token,
+    }, follow_redirects=False)
+    assert created.status_code == 409
+    assert "already uses that slug" in created.text
+    assert f'name="csrf_token" value="{token}"' in created.text
+    assert 'value="Copy"' in created.text
+
+    conn = get_connection(tmp_path / "test.db")
+    try:
+        second_id = conn.execute(
+            "SELECT id FROM content WHERE type='note' AND slug='second'"
+        ).fetchone()["id"]
+    finally:
+        conn.close()
+    edited = editor.post(f"/admin/notes/{second_id}", data={
+        "title": "Renamed", "slug": "first", "body_md": "x", "csrf_token": token,
+    }, follow_redirects=False)
+    assert edited.status_code == 409
+    assert "already uses that slug" in edited.text
+    assert f'action="/admin/notes/{second_id}"' in edited.text
+
+    conn = get_connection(tmp_path / "test.db")
+    try:
+        rows = conn.execute(
+            "SELECT title, slug FROM content WHERE type='note' ORDER BY id"
+        ).fetchall()
+    finally:
+        conn.close()
+    assert [(r["title"], r["slug"]) for r in rows] == [
+        ("first", "first"), ("second", "second"),
+    ]

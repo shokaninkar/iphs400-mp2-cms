@@ -119,12 +119,12 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 
 ## 8. Testing strategy
 
-Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 47/47 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_pages.py`, `test_ctx_guard.py`, `test_usage_report.py`).
+Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 49/49 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_pages.py`, `test_ctx_guard.py`, `test_usage_report.py`).
 
 ## 9. Open questions / risks
 
 - ~~Per-module `Jinja2Templates` instances~~ — resolved in T04: `app/templating.py` holds the single instance and the `markdown` filter. Still open for T07: `app/publish.py::environment()` is a separate Jinja `Environment` without the `markdown` filter; it must register it (or share the setup) before rendering `public/page.html`.
 - T07 should own the "only published Pages, by `nav_order`" query in one place (currently inline in `app/main.py`'s `/`), and add site-wide Page navigation to `base.html` — T04 lists published Pages on the home page only.
-- Duplicate slug on create/edit (Notes and Pages) raises an unhandled `sqlite3.IntegrityError` (500) from `UNIQUE(type, slug)` — tracked as a follow-up issue.
+- ~~Duplicate slug on create/edit (Notes and Pages) raises an unhandled `sqlite3.IntegrityError` (500)~~ — resolved in T09 (#9): the form re-renders with a 409 and an error; other integrity errors still propagate.
 - The `Notes` list currently shows a fully-rendered body inline; T05's "Markdown preview" requirement may want a distinct, possibly JS-driven preview instead — worth revisiting when T05 starts.
 - Session/usage-ledger hooks (`decide()`, `spend()`) are implemented and tested, but only fire for real when Claude Code's project root is this repo — see `docs/process/compaction-log.md` for the note on why T01–T03's sessions didn't populate real ledger data.

@@ -161,3 +161,48 @@ def test_page_body_is_sanitized_on_the_public_route(client_as):
     html = response.text
     assert "<script>" not in html
     assert "onerror=" not in html
+
+
+def test_duplicate_page_slug_rerenders_the_form_with_an_error(client_as, tmp_path):
+    admin = client_as("admin")
+    token = _csrf(admin)
+    for slug in ("story", "guide"):
+        admin.post("/admin/pages", data={
+            "title": slug, "slug": slug, "body_md": "x", "nav_order": "0",
+            "csrf_token": token,
+        })
+
+    created = admin.post("/admin/pages", data={
+        "title": "Copy", "slug": "story", "body_md": "kept", "nav_order": "3",
+        "csrf_token": token,
+    }, follow_redirects=False)
+    assert created.status_code == 409
+    assert "already uses that slug" in created.text
+    assert f'name="csrf_token" value="{token}"' in created.text
+    assert 'value="Copy"' in created.text
+
+    conn = get_connection(tmp_path / "test.db")
+    try:
+        guide_id = conn.execute(
+            "SELECT id FROM content WHERE type='page' AND slug='guide'"
+        ).fetchone()["id"]
+    finally:
+        conn.close()
+    edited = admin.post(f"/admin/pages/{guide_id}", data={
+        "title": "Renamed", "slug": "story", "body_md": "x", "nav_order": "0",
+        "csrf_token": token,
+    }, follow_redirects=False)
+    assert edited.status_code == 409
+    assert "already uses that slug" in edited.text
+    assert f'action="/admin/pages/{guide_id}"' in edited.text
+
+    conn = get_connection(tmp_path / "test.db")
+    try:
+        rows = conn.execute(
+            "SELECT title, slug FROM content WHERE type='page' ORDER BY id"
+        ).fetchall()
+    finally:
+        conn.close()
+    assert [(r["title"], r["slug"]) for r in rows] == [
+        ("story", "story"), ("guide", "guide"),
+    ]

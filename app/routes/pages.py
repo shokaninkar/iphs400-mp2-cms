@@ -8,10 +8,24 @@ import sqlite3
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from app.db import is_duplicate_slug
 from app.deps import get_db, get_session, require_role, verify_csrf
 from app.templating import templates
 
 router = APIRouter(prefix="/admin/pages")
+
+DUPLICATE_SLUG = "Another Page already uses that slug. Choose a different one."
+
+
+def _duplicate_slug_form(
+    request: Request, page: sqlite3.Row | None, form: dict, csrf_token: str
+):
+    """Re-render the Page form after a UNIQUE(type, slug) violation."""
+    return templates.TemplateResponse(
+        request, "admin/page_form.html",
+        {"page": page, "form": form, "error": DUPLICATE_SLUG, "csrf_token": csrf_token},
+        status_code=409,
+    )
 
 
 def _get_page_or_404(conn: sqlite3.Connection, page_id: int) -> sqlite3.Row:
@@ -51,19 +65,28 @@ def new_page_form(
 
 @router.post("")
 def create_page(
+    request: Request,
     title: str = Form(...),
     slug: str = Form(...),
     body_md: str = Form(""),
     nav_order: int = Form(0),
     user: sqlite3.Row = Depends(require_role("admin")),
     conn: sqlite3.Connection = Depends(get_db),
+    session: dict = Depends(get_session),
     _csrf: None = Depends(verify_csrf),
 ):
-    conn.execute(
-        "INSERT INTO content (type, title, slug, body_md, status, author_id, "
-        "nav_order) VALUES ('page', ?, ?, ?, 'draft', ?, ?)",
-        (title, slug, body_md, user["id"], nav_order),
-    )
+    try:
+        conn.execute(
+            "INSERT INTO content (type, title, slug, body_md, status, author_id, "
+            "nav_order) VALUES ('page', ?, ?, ?, 'draft', ?, ?)",
+            (title, slug, body_md, user["id"], nav_order),
+        )
+    except sqlite3.IntegrityError as exc:
+        conn.rollback()
+        if not is_duplicate_slug(exc):
+            raise
+        form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
+        return _duplicate_slug_form(request, None, form, session["csrf"])
     conn.commit()
     return RedirectResponse(url="/admin/pages", status_code=303)
 
@@ -85,20 +108,29 @@ def edit_page_form(
 @router.post("/{page_id}")
 def update_page(
     page_id: int,
+    request: Request,
     title: str = Form(...),
     slug: str = Form(...),
     body_md: str = Form(""),
     nav_order: int = Form(0),
     user: sqlite3.Row = Depends(require_role("admin")),
     conn: sqlite3.Connection = Depends(get_db),
+    session: dict = Depends(get_session),
     _csrf: None = Depends(verify_csrf),
 ):
-    _get_page_or_404(conn, page_id)
-    conn.execute(
-        "UPDATE content SET title=?, slug=?, body_md=?, nav_order=?, "
-        "updated_at=datetime('now') WHERE id=?",
-        (title, slug, body_md, nav_order, page_id),
-    )
+    page = _get_page_or_404(conn, page_id)
+    try:
+        conn.execute(
+            "UPDATE content SET title=?, slug=?, body_md=?, nav_order=?, "
+            "updated_at=datetime('now') WHERE id=?",
+            (title, slug, body_md, nav_order, page_id),
+        )
+    except sqlite3.IntegrityError as exc:
+        conn.rollback()
+        if not is_duplicate_slug(exc):
+            raise
+        form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
+        return _duplicate_slug_form(request, page, form, session["csrf"])
     conn.commit()
     return RedirectResponse(url="/admin/pages", status_code=303)
 
