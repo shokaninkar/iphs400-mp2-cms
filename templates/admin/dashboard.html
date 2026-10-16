@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Admin{% endblock %}
+{% block content %}
+  <h1>Dashboard</h1>
+  <p>Signed in as {{ user["email"] }} ({{ user["role"] }}).</p>
+  <table>
+    <thead>
+      <tr><th>Type</th>{% for s in statuses %}<th>{{ s | capitalize }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+    {% for t in types %}
+      <tr>
+        <th scope="row">{{ "Pages" if t == "page" else ("Notes" if user["role"] == "admin" else "My Notes") }}</th>
+        {% for s in statuses %}
+        <td><a href="{{ rel('/admin/content') }}?type={{ t }}&amp;status={{ s }}" data-count="{{ t }}-{{ s }}">{{ counts[(t, s)] }}</a></td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <ul>
+    <li><a href="{{ rel('/admin/content') }}">All content</a></li>
+    <li><a href="{{ rel('/admin/notes/new') }}">+ New Note</a></li>
+    {% if user["role"] == "admin" %}
+    <li><a href="{{ rel('/admin/pages') }}">Pages</a></li>
+    <li><a href="{{ rel('/admin/users') }}">Manage users</a></li>
+    {% endif %}
+  </ul>
+{% endblock %}

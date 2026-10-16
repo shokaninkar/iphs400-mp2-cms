@@ -17,8 +17,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from app import settings
 from app.content import nav_items, published_notes, published_one, published_pages
 from app.db import init_db
-from app.deps import get_db, require_role
-from app.routes import auth, notes, pages, users
+from app.deps import get_db
+from app.routes import auth, dashboard, notes, pages, users
 from app.templating import templates
 
 
@@ -26,15 +26,6 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     app = FastAPI(title="IPHS 400 MP2 CMS")
     app.state.db_path = db_path or settings.DATABASE_PATH
     init_db(app.state.db_path)
-
-    @app.get("/admin")
-    def admin_home(
-        request: Request,
-        user=Depends(require_role("admin", "editor")),
-    ):
-        return templates.TemplateResponse(
-            request, "admin/hello.html", {"title": "Admin", "user": user}
-        )
 
     # Live preview of the public site. Same queries, templates and relative
     # URL shape as `cms publish` (app/publish.py), so preview == export.
@@ -77,6 +68,7 @@ def create_app(db_path: Path | None = None) -> FastAPI:
                        title=note["title"], note=note)
 
     app.include_router(auth.router)
+    app.include_router(dashboard.router)
     app.include_router(notes.router)
     app.include_router(pages.router)
     app.include_router(users.router)

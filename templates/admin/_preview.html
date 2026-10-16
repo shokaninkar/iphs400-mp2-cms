@@ -1,0 +1,27 @@
+{#- Shared by note_form.html and page_form.html. The first render is server-side,
+    so the pane works without JavaScript; the script below refreshes it as you
+    type. Both paths use app/markdown.py, so the HTML is nh3-sanitized (D4). #}
+<section aria-label="Preview">
+  <h2>Preview</h2>
+  <div id="preview" data-url="{{ rel('/admin/preview') }}">{{ (values['body_md'] if values else '') | markdown | safe }}</div>
+</section>
+<script>
+(function () {
+  var box = document.getElementById("body_md");
+  var pane = document.getElementById("preview");
+  var token = box.form.elements["csrf_token"].value;
+  var timer;
+  box.addEventListener("input", function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      fetch(pane.dataset.url, {
+        method: "POST",
+        body: new URLSearchParams({ body_md: box.value, csrf_token: token }),
+        credentials: "same-origin"
+      }).then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+        .then(function (html) { pane.innerHTML = html; })
+        .catch(function () { pane.textContent = "Preview unavailable."; });
+    }, 300);
+  });
+})();
+</script>

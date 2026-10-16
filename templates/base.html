@@ -7,18 +7,24 @@
   {#- `root` is "" at the site root and "../" one folder down (pages/, notes/).
       Every public link is built from it, so nothing is root-absolute. #}
   {%- set root = root | default('') %}
+  {#- `nav` is set only for the public site (cms publish and its preview
+      routes), never for admin screens, which have no style.css or index.html. #}
+  {%- if nav is defined %}
   <link rel="stylesheet" href="{{ root }}style.css">
+  {%- endif %}
 </head>
 <body>
   <header>
-    <a class="brand" href="{{ root }}index.html">{{ site_title | default(title) }}</a>
     {% if nav is defined %}
+    <a class="brand" href="{{ root }}index.html">{{ site_title | default(title) }}</a>
     <nav aria-label="Site">
       {%- for item in nav %}
       <a href="{{ root }}{{ item.href }}">{{ item.title }}</a>
       {%- endfor %}
       <a href="{{ root }}notes/index.html">Notes</a>
     </nav>
+    {% else %}
+    <a class="brand" href="{{ rel('/admin') }}">inkadmissions CMS</a>
     {% endif %}
   </header>
   <main>{% block content %}{% endblock %}</main>

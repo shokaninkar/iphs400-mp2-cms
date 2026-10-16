@@ -4,7 +4,7 @@
   <h1>{{ "Edit Note" if note else "New Note" }}</h1>
   {% set values = form or note %}
   {% if error %}<p role="alert">{{ error }}</p>{% endif %}
-  <form method="post" action="{{ ('/admin/notes/' ~ note['id']) if note else '/admin/notes' }}">
+  <form method="post" action="{{ rel(('/admin/notes/' ~ note['id']) if note else '/admin/notes') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <p><label>Title<br>
       <input name="title" value="{{ values['title'] if values else '' }}" required>
@@ -13,8 +13,9 @@
       <input name="slug" value="{{ values['slug'] if values else '' }}" required>
     </label></p>
     <p><label>Body (Markdown)<br>
-      <textarea name="body_md" rows="10" cols="60">{{ values['body_md'] if values else '' }}</textarea>
+      <textarea id="body_md" name="body_md" rows="10" cols="60">{{ values['body_md'] if values else '' }}</textarea>
     </label></p>
+    {% include "admin/_preview.html" %}
     <button type="submit">Save draft</button>
   </form>
 {% endblock %}

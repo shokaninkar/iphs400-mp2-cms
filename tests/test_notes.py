@@ -212,7 +212,7 @@ def test_duplicate_note_slug_rerenders_the_form_with_an_error(client_as, tmp_pat
     }, follow_redirects=False)
     assert edited.status_code == 409
     assert "already uses that slug" in edited.text
-    assert f'action="/admin/notes/{second_id}"' in edited.text
+    assert f'action="{second_id}"' in edited.text
 
     conn = get_connection(tmp_path / "test.db")
     try:

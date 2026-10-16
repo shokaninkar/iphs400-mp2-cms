@@ -68,24 +68,20 @@ def test_editor_gets_403_on_every_page_route(client_as, tmp_path):
     finally:
         conn.close()
 
+    # The editor's real token, and no redirect-following: with a fake token
+    # verify_csrf would 403 on its own and mask a missing role check.
     editor = client_as("editor")
-    assert editor.get("/admin/pages").status_code == 403
-    assert editor.get("/admin/pages/new").status_code == 403
-    assert editor.get(f"/admin/pages/{page_id}/edit").status_code == 403
-    assert editor.post("/admin/pages", data={
-        "title": "x", "slug": "x", "body_md": "x", "nav_order": "0",
-        "csrf_token": "whatever",
-    }).status_code == 403
-    assert editor.post(f"/admin/pages/{page_id}", data={
-        "title": "x", "slug": "x", "body_md": "x", "nav_order": "0",
-        "csrf_token": "whatever",
-    }).status_code == 403
-    assert editor.post(f"/admin/pages/{page_id}/publish",
-                        data={"csrf_token": "whatever"}).status_code == 403
-    assert editor.post(f"/admin/pages/{page_id}/unpublish",
-                        data={"csrf_token": "whatever"}).status_code == 403
-    assert editor.post(f"/admin/pages/{page_id}/delete",
-                        data={"csrf_token": "whatever"}).status_code == 403
+    token = re.search(r'name="csrf_token" value="([^"]+)"',
+                      editor.get("/admin/notes/new").text).group(1)
+    for path in ["/admin/pages", "/admin/pages/new", f"/admin/pages/{page_id}/edit"]:
+        assert editor.get(path, follow_redirects=False).status_code == 403, path
+    form = {"title": "x", "slug": "x", "body_md": "x", "nav_order": "0",
+            "csrf_token": token}
+    for path in ["/admin/pages", f"/admin/pages/{page_id}"]:
+        assert editor.post(path, data=form, follow_redirects=False).status_code == 403, path
+    for action in ["publish", "unpublish", "delete"]:
+        assert editor.post(f"/admin/pages/{page_id}/{action}", data={"csrf_token": token},
+                           follow_redirects=False).status_code == 403, action
 
 
 def test_published_page_appears_in_public_navigation(client_as):
@@ -95,7 +91,7 @@ def test_published_page_appears_in_public_navigation(client_as):
         "nav_order": "0", "csrf_token": _csrf(admin),
     })
     list_html = admin.get("/admin/pages").text
-    page_id = re.search(r"/admin/pages/(\d+)/edit", list_html).group(1)
+    page_id = re.search(r"pages/(\d+)/edit", list_html).group(1)
     token = re.search(r'name="csrf_token" value="([^"]+)"', list_html).group(1)
 
     # Not yet published: shouldn't appear on the public home page.
@@ -152,7 +148,7 @@ def test_page_body_is_sanitized_on_the_public_route(client_as):
         "nav_order": "0", "csrf_token": _csrf(admin),
     })
     list_html = admin.get("/admin/pages").text
-    page_id = re.search(r"/admin/pages/(\d+)/edit", list_html).group(1)
+    page_id = re.search(r"pages/(\d+)/edit", list_html).group(1)
     token = re.search(r'name="csrf_token" value="([^"]+)"', list_html).group(1)
     admin.post(f"/admin/pages/{page_id}/publish", data={"csrf_token": token})
 
@@ -194,7 +190,7 @@ def test_duplicate_page_slug_rerenders_the_form_with_an_error(client_as, tmp_pat
     }, follow_redirects=False)
     assert edited.status_code == 409
     assert "already uses that slug" in edited.text
-    assert f'action="/admin/pages/{guide_id}"' in edited.text
+    assert f'action="{guide_id}"' in edited.text
 
     conn = get_connection(tmp_path / "test.db")
     try:
