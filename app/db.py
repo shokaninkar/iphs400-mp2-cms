@@ -38,6 +38,11 @@ def is_duplicate_slug(exc: sqlite3.IntegrityError) -> bool:
     return "UNIQUE constraint failed: content.type, content.slug" in str(exc)
 
 
+def is_duplicate_email(exc: sqlite3.IntegrityError) -> bool:
+    """True only for the users table's UNIQUE(email)."""
+    return "UNIQUE constraint failed: users.email" in str(exc)
+
+
 def get_connection(path: Path | str | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(path or settings.DATABASE_PATH)
     conn.row_factory = sqlite3.Row

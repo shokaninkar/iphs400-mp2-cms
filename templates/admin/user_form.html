@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}New user — Admin{% endblock %}
+{% block content %}
+  <h1>New user</h1>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {#- No action attribute: posts back to this page's own URL, /admin/users/new. #}
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p><label>Email<br>
+      <input name="email" type="email" value="{{ form.get('email', '') }}" required>
+    </label></p>
+    <p><label>Password<br>
+      <input name="password" type="password" autocomplete="new-password" required>
+    </label></p>
+    <p><label>Role<br>
+      <select name="role">
+      {% for r in roles %}
+        <option value="{{ r }}"{% if r == form.get('role', 'editor') %} selected{% endif %}>{{ r }}</option>
+      {% endfor %}
+      </select>
+    </label></p>
+    <button type="submit">Create user</button>
+  </form>
+  <p><a href="../users">Back to users</a></p>
+{% endblock %}

@@ -18,7 +18,7 @@ from app import settings
 from app.content import nav_items, published_notes, published_one, published_pages
 from app.db import init_db
 from app.deps import get_db, require_role
-from app.routes import auth, notes, pages
+from app.routes import auth, notes, pages, users
 from app.templating import templates
 
 
@@ -79,6 +79,7 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     app.include_router(auth.router)
     app.include_router(notes.router)
     app.include_router(pages.router)
+    app.include_router(users.router)
     return app
 
 

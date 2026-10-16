@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin{% endblock %}
+{% block content %}
+  <h1>Users</h1>
+  {#- Relative URLs: this page is /admin/users, so "users/..." resolves under it. #}
+  <p><a href="users/new">+ New user</a></p>
+  <table>
+    <thead>
+      <tr><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u["email"] }}</td>
+        <td>{{ u["role"] }}</td>
+        <td>{{ "active" if u["is_active"] else "deactivated" }}</td>
+        <td>
+        {% if u["id"] == current_user["id"] %}
+          (you)
+        {% else %}
+          <form method="post" action="users/{{ u['id'] }}/role" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label>Role
+              <select name="role">
+              {% for r in roles %}
+                <option value="{{ r }}"{% if r == u["role"] %} selected{% endif %}>{{ r }}</option>
+              {% endfor %}
+              </select>
+            </label>
+            <button type="submit">Change role</button>
+          </form>
+          {% if u["is_active"] %}
+          <form method="post" action="users/{{ u['id'] }}/deactivate" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit">Deactivate</button>
+          </form>
+          {% endif %}
+        {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

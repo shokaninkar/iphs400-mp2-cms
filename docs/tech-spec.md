@@ -1,6 +1,6 @@
 # Tech Spec — inkadmissions CMS
 
-**Status:** T01–T04, T07 and #9 implemented; T05–T06 planned.
+**Status:** T01–T04, T06, T07 and #9 implemented; T05 planned.
 **Source of truth for requirements:** [spec issue #1](https://github.com/shokaninkar/iphs400-mp2-cms/issues/1). This document is the engineering-facing companion — architecture and data model detail the spec issue deliberately leaves out.
 
 ## 1. Overview
@@ -17,7 +17,7 @@ Client context, vocabulary, and the decisions behind this design live in [`CONTE
 - Notes: editor-authored drafts, admin-reviewed publish (T03)
 - Pages: admin-only, appear in public nav (T04)
 - Admin console UX: dashboard, filterable list, Markdown preview (T05)
-- User management: admin creates/edits/deactivates users (T06)
+- User management: admin creates users, changes roles, deactivates users (T06)
 - Public site + `cms publish`: only published content, relative paths (T07)
 
 **Explicitly out of scope** (see `CONTEXT.md` → Resolved):
@@ -34,7 +34,7 @@ Client context, vocabulary, and the decisions behind this design live in [`CONTE
 │    ├─ app/routes/auth.py    — /login, /logout                               │
 │    ├─ app/routes/notes.py   — /admin/notes/*                                │
 │    ├─ app/routes/pages.py   — /admin/pages/*        (T04)                   │
-│    ├─ app/routes/users.py   — /admin/users/*        (T06, planned)          │
+│    ├─ app/routes/users.py   — /admin/users/*        (T06)                   │
 │    └─ app/deps.py           — get_db, get_session, require_role, verify_csrf│
 │                                     │                                        │
 │                                     ▼                                        │
@@ -83,7 +83,8 @@ One table for both Pages and Notes, discriminated by `type`. Pages additionally 
 | Edit another user's Note | ✅ | ❌ (403) |
 | Publish/unpublish/delete a Note | ✅ | ❌ (403) |
 | Create/edit/publish/delete a Page | ✅ | ❌ (403) |
-| Create/edit users, deactivate | ✅ | ❌ (403) — planned T06 |
+| Create users, change role, deactivate | ✅ | ❌ (403) |
+| Change own role or deactivate self | ❌ (400, prevents admin lockout) | ❌ (403) |
 | Anonymous → any `/admin/*` route | redirected to `/login` | redirected to `/login` |
 
 Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden in templates — two distinct failure modes: **no session → 303 to `/login`**, **wrong role → 403**.
@@ -107,14 +108,14 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 | GET | `/pages/{slug}.html` (published only, else 404) | anonymous | T04 | ✅ |
 | GET | `/notes/index.html`, `/notes/{slug}.html` (live preview of the export) | anonymous | T07 | ✅ |
 | GET | `/admin/dashboard`, list filters | admin, editor | T05 | planned |
-| GET/POST | `/admin/users*` | admin | T06 | planned |
+| GET/POST | `/admin/users*` | admin | T06 | ✅ |
 | — | `cms publish` CLI → `site/` (index, `pages/`, `notes/`, style.css) | — | T07 | ✅ |
 
 ## 7. Security
 
 - **D1 Password hashing:** argon2 (`app/security.py`), never logged or stored plain.
 - **D2 CSRF:** every state-changing form beyond `/login` requires a token minted at login and carried in the signed session cookie (`app/deps.py::verify_csrf`). `/login` is the one documented exception — no prior session exists for a forged request to ride on, and `tests/conftest.py`'s `client_as` fixture (used by every role test) depends on token-free login.
-- **D3 Access control:** `require_role` dependency, tested per route (T02–T04 tests; T06 will extend coverage when its routes land).
+- **D3 Access control:** `require_role` dependency, tested per route (T02–T04 and T06 tests).
 - **D4 Sanitized Markdown:** `nh3.clean()` default allowlist strips `<script>` and `on*` attributes before any Note/Page body reaches a template (`app/markdown.py`). Verified directly against the library before writing app code.
 - **D5 No secrets committed:** `cms.db` and `.env` gitignored; verified via `check_submission.py`'s history grep.
 
