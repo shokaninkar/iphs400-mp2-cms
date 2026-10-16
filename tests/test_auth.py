@@ -1,6 +1,8 @@
 """T01: login, logout, password hashing."""
 from __future__ import annotations
 
+import re
+
 from app.db import get_connection
 
 
@@ -37,7 +39,9 @@ def test_unknown_email_is_rejected_with_the_same_message(client):
 
 def test_logout_clears_the_session_cookie(client_as):
     c = client_as("admin")
-    response = c.post("/logout", follow_redirects=False)
+    # T11: logout is a state-changing form, so it carries the CSRF token too.
+    token = re.search(r'name="csrf_token" value="([^"]+)"', c.get("/admin").text).group(1)
+    response = c.post("/logout", data={"csrf_token": token}, follow_redirects=False)
     assert response.status_code == 303
     set_cookie = response.headers.get("set-cookie", "")
     assert "cms_session=" in set_cookie

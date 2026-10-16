@@ -95,7 +95,7 @@ def create_page(
         form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
         return _form_error(request, None, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
-    return RedirectResponse(url="/admin/pages", status_code=303)
+    return RedirectResponse(url="/admin/pages?done=saved", status_code=303)
 
 
 @router.get("/{page_id}/edit")
@@ -142,7 +142,7 @@ def update_page(
         form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
         return _form_error(request, page, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
-    return RedirectResponse(url="/admin/pages", status_code=303)
+    return RedirectResponse(url="/admin/pages?done=saved", status_code=303)
 
 
 @router.post("/{page_id}/publish")
@@ -158,7 +158,7 @@ def publish_page(
         (page_id,),
     )
     conn.commit()
-    return RedirectResponse(url="/admin/pages", status_code=303)
+    return RedirectResponse(url="/admin/pages?done=published", status_code=303)
 
 
 @router.post("/{page_id}/unpublish")
@@ -174,7 +174,7 @@ def unpublish_page(
         (page_id,),
     )
     conn.commit()
-    return RedirectResponse(url="/admin/pages", status_code=303)
+    return RedirectResponse(url="/admin/pages?done=unpublished", status_code=303)
 
 
 @router.post("/{page_id}/delete")
@@ -187,4 +187,4 @@ def delete_page(
     _get_page_or_404(conn, page_id)
     conn.execute("DELETE FROM content WHERE id=?", (page_id,))
     conn.commit()
-    return RedirectResponse(url="/admin/pages", status_code=303)
+    return RedirectResponse(url="/admin/pages?done=deleted", status_code=303)

@@ -14,7 +14,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.deps import get_db
+from app.deps import get_db, verify_csrf
 from app.security import (
     SESSION_COOKIE,
     SESSION_MAX_AGE,
@@ -59,7 +59,7 @@ def login_submit(
 
 
 @router.post("/logout")
-def logout():
+def logout(_: None = Depends(verify_csrf)):
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie(SESSION_COOKIE)
     return response

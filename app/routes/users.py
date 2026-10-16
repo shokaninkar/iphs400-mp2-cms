@@ -109,7 +109,7 @@ def create_user(
             raise
         return _new_user_form(request, session["csrf"], form, DUPLICATE_EMAIL, 409)
     conn.commit()
-    return RedirectResponse(url="/admin/users", status_code=303)
+    return RedirectResponse(url="/admin/users?done=created", status_code=303)
 
 
 @router.post("/{user_id}/role")
@@ -126,7 +126,7 @@ def change_role(
         raise HTTPException(status_code=422, detail=BAD_ROLE)
     conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
     conn.commit()
-    return RedirectResponse(url="/admin/users", status_code=303)
+    return RedirectResponse(url="/admin/users?done=role", status_code=303)
 
 
 @router.post("/{user_id}/deactivate")
@@ -140,4 +140,4 @@ def deactivate_user(
     _refuse_self(user, target)
     conn.execute("UPDATE users SET is_active=0 WHERE id=?", (user_id,))
     conn.commit()
-    return RedirectResponse(url="/admin/users", status_code=303)
+    return RedirectResponse(url="/admin/users?done=deactivated", status_code=303)

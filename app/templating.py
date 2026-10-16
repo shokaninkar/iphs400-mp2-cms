@@ -13,6 +13,7 @@ from jinja2 import pass_context
 
 from app import settings
 from app.markdown import render_markdown
+from app.deps import get_session
 
 templates = Jinja2Templates(directory=str(settings.TEMPLATES))
 templates.env.filters["markdown"] = render_markdown
@@ -34,3 +35,15 @@ def rel(context, target: str) -> str:
 
 
 templates.env.globals["rel"] = rel
+
+
+# T11: the signed session (role, csrf) for the admin nav and logout form, via
+# the same reader the routes use. Display only; routes enforce their own roles.
+templates.env.globals["admin_session"] = get_session
+
+# T11: success messages after a redirect, keyed by ?done=. Unknown keys show nothing.
+templates.env.globals["DONE_MESSAGES"] = {
+    "saved": "Saved.", "published": "Published.", "unpublished": "Unpublished.",
+    "deleted": "Deleted.", "created": "User created.", "role": "Role changed.",
+    "deactivated": "User deactivated.",
+}

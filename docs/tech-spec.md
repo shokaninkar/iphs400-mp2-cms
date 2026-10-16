@@ -1,6 +1,6 @@
 # Tech Spec — inkadmissions CMS
 
-**Status:** T01–T07, #9 and T10 (#10, admin styling and a friendly 403 page) implemented. Tagged `mp2-final`.
+**Status:** T01–T07, #9, T10 (#10, admin styling and a friendly 403 page) and T11 (#11, admin nav, logout button, success messages) implemented. Tagged `mp2-final`.
 **Source of truth for requirements:** [spec issue #1](https://github.com/shokaninkar/iphs400-mp2-cms/issues/1). This document is the engineering-facing companion — architecture and data model detail the spec issue deliberately leaves out.
 
 ## 1. Overview
@@ -94,7 +94,7 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 | Method | Path | Role | Ticket | Status |
 |---|---|---|---|---|
 | GET/POST | `/login` | anonymous | T01 | ✅ |
-| POST | `/logout` | any | T01 | ✅ |
+| POST | `/logout` (CSRF token required since T11) | any | T01, T11 | ✅ |
 | GET | `/admin` | admin, editor | T02 | ✅ |
 | GET | `/admin/notes` | admin, editor | T03 | ✅ |
 | GET | `/admin/notes/new` | admin, editor | T03 | ✅ |
@@ -123,7 +123,7 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 
 ## 8. Testing strategy
 
-Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 101/101 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_pages.py`, `test_dashboard.py`, `test_users.py`, `test_publish.py`, `test_admin_ui.py`, `test_ctx_guard.py`, `test_usage_report.py`).
+Route-level tests via `fastapi.testclient.TestClient`, not internal-function mocking — matches what the rubric's D3/E2 actually check. Every capability gets: a happy path, an access-control case (wrong role / anonymous), and a persistence case (fresh DB connection stands in for a server restart). Current: 108/108 passing (`tests/test_t00.py`, `test_auth.py`, `test_roles.py`, `test_notes.py`, `test_pages.py`, `test_dashboard.py`, `test_users.py`, `test_publish.py`, `test_admin_ui.py`, `test_admin_nav.py`, `test_ctx_guard.py`, `test_usage_report.py`).
 
 ## 9. Open questions / risks
 

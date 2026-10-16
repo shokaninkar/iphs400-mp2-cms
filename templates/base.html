@@ -28,9 +28,30 @@
     </nav>
     {% else %}
     <a class="brand" href="{{ rel('/admin') }}">inkadmissions CMS</a>
+    {#- T11: persistent admin nav. Role here is display only; routes enforce it. #}
+    {%- set s = admin_session(request) %}
+    {%- if s %}
+    <nav aria-label="Admin">
+      <a href="{{ rel('/admin') }}">Dashboard</a>
+      <a href="{{ rel('/admin/content') }}">Content</a>
+      <a href="{{ rel('/admin/notes') }}">Notes</a>
+      {%- if s.role == "admin" %}
+      <a href="{{ rel('/admin/pages') }}">Pages</a>
+      <a href="{{ rel('/admin/users') }}">Users</a>
+      {%- endif %}
+      <form method="post" action="{{ rel('/logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ s.csrf }}">
+        <button type="submit">Log out</button>
+      </form>
+    </nav>
+    {%- endif %}
     {% endif %}
   </header>
-  <main>{% block content %}{% endblock %}</main>
+  <main>
+    {%- if nav is not defined and DONE_MESSAGES.get(request.query_params.get('done')) %}
+    <p role="status" class="ok">{{ DONE_MESSAGES[request.query_params['done']] }}</p>
+    {%- endif %}
+    {% block content %}{% endblock %}</main>
   <footer><small>IPHS 400 Mini-Project #2</small></footer>
 </body>
 </html>

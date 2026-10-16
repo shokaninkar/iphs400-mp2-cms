@@ -113,7 +113,7 @@ def create_note(
         form = {"title": title, "slug": slug, "body_md": body_md}
         return _form_error(request, None, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
-    return RedirectResponse(url="/admin/notes", status_code=303)
+    return RedirectResponse(url="/admin/notes?done=saved", status_code=303)
 
 
 @router.get("/{note_id}/edit")
@@ -161,7 +161,7 @@ def update_note(
         form = {"title": title, "slug": slug, "body_md": body_md}
         return _form_error(request, note, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
-    return RedirectResponse(url="/admin/notes", status_code=303)
+    return RedirectResponse(url="/admin/notes?done=saved", status_code=303)
 
 
 @router.post("/{note_id}/publish")
@@ -177,7 +177,7 @@ def publish_note(
         (note_id,),
     )
     conn.commit()
-    return RedirectResponse(url="/admin/notes", status_code=303)
+    return RedirectResponse(url="/admin/notes?done=published", status_code=303)
 
 
 @router.post("/{note_id}/unpublish")
@@ -193,7 +193,7 @@ def unpublish_note(
         (note_id,),
     )
     conn.commit()
-    return RedirectResponse(url="/admin/notes", status_code=303)
+    return RedirectResponse(url="/admin/notes?done=unpublished", status_code=303)
 
 
 @router.post("/{note_id}/delete")
@@ -206,4 +206,4 @@ def delete_note(
     _get_note_or_404(conn, note_id)
     conn.execute("DELETE FROM content WHERE id=?", (note_id,))
     conn.commit()
-    return RedirectResponse(url="/admin/notes", status_code=303)
+    return RedirectResponse(url="/admin/notes?done=deleted", status_code=303)
