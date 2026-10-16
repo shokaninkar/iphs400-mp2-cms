@@ -21,7 +21,7 @@ the issue, then commit `T0N: ... Closes #N`. Keep sessions short.
 | 1 | Duplicate slug | #9 | Catch `sqlite3.IntegrityError` in create/update for Notes and Pages; re-render the form with an error. One test per type. |
 | 2 | T07 public site & publish | #8 | Unblocks the live URL. Also resolve the two T04 deferrals in tech-spec §9: `app/publish.py` needs the shared `markdown` filter (use `app/templating.py`), and the published-content queries move out of `main.py`. Then enable GitHub Pages and put the real URL in the README. |
 | 3 | T06 user management | #7 | Needed for the `users` screenshots. Deactivated users must be refused at login. |
-| 4 | T05 admin console UX | #6 | Needed for the `dashboard` screenshots. **Also fix the root-absolute links** in `templates/admin/notes_list.html` and `templates/admin/pages_list.html` (checker FAIL: `href="/admin/..."`, `action="/admin/..."`); these lists are what T05 rebuilds anyway. |
+| 4 | T05 admin console UX | #6 | Needed for the `dashboard` screenshots. **Also fix the root-absolute links** in `templates/admin/notes_list.html` and `templates/admin/pages_list.html` (checker FAIL: `href="/admin/..."`, `action="/admin/..."`); these lists are what T05 rebuilds anyway. **Also** fix `tests/test_pages.py::test_editor_gets_403_on_every_page_route`: it posts a fake CSRF token and follows redirects, so a missing role check would still give 403 (T06 review found and fixed the same masking in `test_users.py`). Use the editor's real token and `follow_redirects=False`. |
 
 ## Checker failures and who owns them
 
