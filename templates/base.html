@@ -11,6 +11,9 @@
       routes), never for admin screens, which have no style.css or index.html. #}
   {%- if nav is defined %}
   <link rel="stylesheet" href="{{ root }}style.css">
+  {%- else %}
+  {#- Admin screens: inlined so the admin needs no static route (T10). #}
+  {% include "admin/_style.html" %}
   {%- endif %}
 </head>
 <body>

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}No access — Admin{% endblock %}
+{% block content %}
+  <h1>You don't have access to this page</h1>
+  <p>{{ message }}</p>
+  <p><a href="{{ rel('/admin') }}">Back to the dashboard</a></p>
+{% endblock %}
