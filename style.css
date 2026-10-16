@@ -1,0 +1,14 @@
+:root { color-scheme: light dark; --accent: #2f5bd3; }
+@media (prefers-color-scheme: dark) { :root { --accent: #8fb0ff; } }
+* { box-sizing: border-box; }
+body { font: 17px/1.6 system-ui, sans-serif; margin: 0 auto; max-width: 42rem; padding: 1rem; overflow-wrap: anywhere; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1.25rem; padding-bottom: .75rem; border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+header .brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: inherit; }
+nav { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+nav a, a { color: var(--accent); }
+main { margin-block: 2rem; }
+img { max-width: 100%; height: auto; }
+pre { overflow-x: auto; }
+ul.notes { padding-left: 1.1rem; }
+ul.notes small { opacity: .7; margin-left: .4rem; }
+footer { opacity: .7; }
