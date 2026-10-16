@@ -69,18 +69,26 @@ its `/code-review` findings were posted on the issue.
 
 ## Generative AI Use Statement
 
-*(Required. Replace this section: name the models and skills you used, quote two
-prompts you really sent, describe one real model failure, and include a
-"Backends used" table if you ever switched providers.)*
+I used Claude Code to help build this CMS. The saved usage ledger labels the provider as **Anthropic** and the model as **Opus 5.5**. Claude wrote implementation code, tests and draft documentation. I supplied the project direction and answered the client questions. I also used ChatGPT to revise the client brief, report and this statement against the saved files and my answers. This was substantial AI assistance, not just spelling correction.
 
-<!--
-Facts you can use (from the repo; write the statement yourself):
-- Model: Claude Opus 5.5 in Claude Code; every ledger row is provider "anthropic" (notes/usage-ledger.csv).
-- Skills used: /grill-with-docs, /to-spec, /to-tickets, /implement, /tdd, /code-review, /handoff.
-- Your grill override: "Posts" = Notes (admissions tips), not client-results spotlights (session 01, Q2).
-- Real failures caught by review: T04 public page links broke under /pages/ (S1, #5);
-  duplicate slug gave a 500 (#9); T07 review found one bad slug would stop the whole publish (#8, S2);
-  the T00 publish tests silently read the real cms.db, so they would have crashed on a clean clone (T07).
-- The seed copy had two sentences stronger than the live site ("Every US college...",
-  "many of them...") that had to be toned down to match the source.
--->
+The planning and review workflow included `/grill-with-docs`, `/to-spec`, `/to-tickets`, test-first work, `/code-review` and `/handoff`. I asked for `/implement`, but it was unavailable in sessions 05 and 06. Session 05 checked existing T09 work, and Claude implemented T06 directly from the ticket in session 06. The intended one-ticket-per-fresh-session process was not followed consistently.
+
+Two prompts in the transcripts are:
+
+> “Read docs/handoff/01_t04-pages-wrapup_20261006.md and finish T04 following CLAUDE.md.”
+
+> `/code-review`
+
+One choice I disagreed with was the meaning of Posts. Claude suggested client-results spotlights. I chose recurring admissions tips, called **Notes**, because I wanted the site to help people understand applications. I kept the first version English-only and required admin approval before publication. I let Claude choose the fictional editor name **Aigerim**; she is a workflow persona, not a real employee I interviewed.
+
+The review caught a duplicate slug (Notes and Pages) that caused a 500 error and public links that broke one folder down, under `/pages/`. Claude made the code fixes. The misleading Pages permission test was fixed in T05; I should not claim I personally wrote that fix. I also noticed when my task had not started after I put instructions on the same line as `/clear`, and asked Claude what was happening.
+
+### Backends used
+
+| Backend | Model | Role |
+|---|---|---|
+| Anthropic | Claude Opus 5.5 | Claude Code planning, implementation and review; recorded in `notes/usage-ledger.csv` |
+
+Claude Code never ran on another provider, so there are no `Backend:` commit trailers. Outside Claude Code, I used **ChatGPT** (OpenAI; model not independently verified) in the browser for WordPress Playground help and to revise the client brief, report and this statement. It was not a Claude Code backend, so it has no ledger rows.
+
+The transcripts, `CONTEXT.md`, specification, issues and tests are the record against which these claims can be checked.
