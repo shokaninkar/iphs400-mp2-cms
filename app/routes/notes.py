@@ -11,6 +11,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from app.content import SAFE_SLUG
 from app.db import is_duplicate_slug
 from app.deps import get_db, get_session, require_role, verify_csrf
 from app.templating import templates
@@ -18,16 +19,19 @@ from app.templating import templates
 router = APIRouter(prefix="/admin/notes")
 
 DUPLICATE_SLUG = "Another Note already uses that slug. Choose a different one."
+BAD_SLUG = ("Slug must be lowercase letters, digits and single hyphens, "
+            "e.g. need-blind-vs-need-aware. It becomes the public file name.")
 
 
-def _duplicate_slug_form(
-    request: Request, note: sqlite3.Row | None, form: dict, csrf_token: str
+def _form_error(
+    request: Request, note: sqlite3.Row | None, form: dict, csrf_token: str,
+    error: str, status_code: int,
 ):
-    """Re-render the Note form after a UNIQUE(type, slug) violation."""
+    """Re-render the Note form with the user's values and an error."""
     return templates.TemplateResponse(
         request, "admin/note_form.html",
-        {"note": note, "form": form, "error": DUPLICATE_SLUG, "csrf_token": csrf_token},
-        status_code=409,
+        {"note": note, "form": form, "error": error, "csrf_token": csrf_token},
+        status_code=status_code,
     )
 
 
@@ -93,6 +97,9 @@ def create_note(
     session: dict = Depends(get_session),
     _csrf: None = Depends(verify_csrf),
 ):
+    if not SAFE_SLUG.fullmatch(slug):
+        form = {"title": title, "slug": slug, "body_md": body_md}
+        return _form_error(request, None, form, session["csrf"], BAD_SLUG, 422)
     try:
         conn.execute(
             "INSERT INTO content (type, title, slug, body_md, status, author_id) "
@@ -104,7 +111,7 @@ def create_note(
         if not is_duplicate_slug(exc):
             raise
         form = {"title": title, "slug": slug, "body_md": body_md}
-        return _duplicate_slug_form(request, None, form, session["csrf"])
+        return _form_error(request, None, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
     return RedirectResponse(url="/admin/notes", status_code=303)
 
@@ -138,6 +145,9 @@ def update_note(
 ):
     note = _get_note_or_404(conn, note_id)
     _ensure_owner_or_admin(user, note)
+    if not SAFE_SLUG.fullmatch(slug):
+        form = {"title": title, "slug": slug, "body_md": body_md}
+        return _form_error(request, note, form, session["csrf"], BAD_SLUG, 422)
     try:
         conn.execute(
             "UPDATE content SET title=?, slug=?, body_md=?, "
@@ -149,7 +159,7 @@ def update_note(
         if not is_duplicate_slug(exc):
             raise
         form = {"title": title, "slug": slug, "body_md": body_md}
-        return _duplicate_slug_form(request, note, form, session["csrf"])
+        return _form_error(request, note, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
     return RedirectResponse(url="/admin/notes", status_code=303)
 

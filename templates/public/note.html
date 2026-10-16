@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+  <article>
+    <h1>{{ note["title"] }}</h1>
+    <p><small>{{ note["created_at"][:10] }}</small></p>
+    <div>{{ note["body_md"] | markdown | safe }}</div>
+  </article>
+  <p><a href="index.html">All Notes</a></p>
+{% endblock %}

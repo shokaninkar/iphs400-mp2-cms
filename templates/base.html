@@ -4,10 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ title }}{% endblock %}</title>
-  <link rel="stylesheet" href="{{ css_path | default('style.css') }}">
+  {#- `root` is "" at the site root and "../" one folder down (pages/, notes/).
+      Every public link is built from it, so nothing is root-absolute. #}
+  {%- set root = root | default('') %}
+  <link rel="stylesheet" href="{{ root }}style.css">
 </head>
 <body>
-  <header><a href="{{ home_path | default('index.html') }}">{{ title }}</a></header>
+  <header>
+    <a class="brand" href="{{ root }}index.html">{{ site_title | default(title) }}</a>
+    {% if nav is defined %}
+    <nav aria-label="Site">
+      {%- for item in nav %}
+      <a href="{{ root }}{{ item.href }}">{{ item.title }}</a>
+      {%- endfor %}
+      <a href="{{ root }}notes/index.html">Notes</a>
+    </nav>
+    {% endif %}
+  </header>
   <main>{% block content %}{% endblock %}</main>
   <footer><small>IPHS 400 Mini-Project #2</small></footer>
 </body>

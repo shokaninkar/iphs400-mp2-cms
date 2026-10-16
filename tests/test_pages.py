@@ -206,3 +206,20 @@ def test_duplicate_page_slug_rerenders_the_form_with_an_error(client_as, tmp_pat
     assert [(r["title"], r["slug"]) for r in rows] == [
         ("story", "story"), ("guide", "guide"),
     ]
+
+
+def test_unsafe_page_slug_is_rejected_on_the_form(client_as, tmp_path):
+    """T07 review: same slug rule as Notes; an unsafe slug never reaches the DB."""
+    admin = client_as("admin")
+    token = _csrf(admin)
+    response = admin.post("/admin/pages", data={
+        "title": "Bad", "slug": "Work With Me", "body_md": "x", "nav_order": "1",
+        "csrf_token": token,
+    }, follow_redirects=False)
+    assert response.status_code == 422
+    assert "Slug must be lowercase" in response.text
+    conn = get_connection(tmp_path / "test.db")
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM content").fetchone()[0] == 0
+    finally:
+        conn.close()

@@ -8,6 +8,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from app.content import SAFE_SLUG
 from app.db import is_duplicate_slug
 from app.deps import get_db, get_session, require_role, verify_csrf
 from app.templating import templates
@@ -15,16 +16,19 @@ from app.templating import templates
 router = APIRouter(prefix="/admin/pages")
 
 DUPLICATE_SLUG = "Another Page already uses that slug. Choose a different one."
+BAD_SLUG = ("Slug must be lowercase letters, digits and single hyphens, "
+            "e.g. need-blind-vs-need-aware. It becomes the public file name.")
 
 
-def _duplicate_slug_form(
-    request: Request, page: sqlite3.Row | None, form: dict, csrf_token: str
+def _form_error(
+    request: Request, page: sqlite3.Row | None, form: dict, csrf_token: str,
+    error: str, status_code: int,
 ):
-    """Re-render the Page form after a UNIQUE(type, slug) violation."""
+    """Re-render the Page form with the user's values and an error."""
     return templates.TemplateResponse(
         request, "admin/page_form.html",
-        {"page": page, "form": form, "error": DUPLICATE_SLUG, "csrf_token": csrf_token},
-        status_code=409,
+        {"page": page, "form": form, "error": error, "csrf_token": csrf_token},
+        status_code=status_code,
     )
 
 
@@ -75,6 +79,9 @@ def create_page(
     session: dict = Depends(get_session),
     _csrf: None = Depends(verify_csrf),
 ):
+    if not SAFE_SLUG.fullmatch(slug):
+        form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
+        return _form_error(request, None, form, session["csrf"], BAD_SLUG, 422)
     try:
         conn.execute(
             "INSERT INTO content (type, title, slug, body_md, status, author_id, "
@@ -86,7 +93,7 @@ def create_page(
         if not is_duplicate_slug(exc):
             raise
         form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
-        return _duplicate_slug_form(request, None, form, session["csrf"])
+        return _form_error(request, None, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
     return RedirectResponse(url="/admin/pages", status_code=303)
 
@@ -119,6 +126,9 @@ def update_page(
     _csrf: None = Depends(verify_csrf),
 ):
     page = _get_page_or_404(conn, page_id)
+    if not SAFE_SLUG.fullmatch(slug):
+        form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
+        return _form_error(request, page, form, session["csrf"], BAD_SLUG, 422)
     try:
         conn.execute(
             "UPDATE content SET title=?, slug=?, body_md=?, nav_order=?, "
@@ -130,7 +140,7 @@ def update_page(
         if not is_duplicate_slug(exc):
             raise
         form = {"title": title, "slug": slug, "body_md": body_md, "nav_order": nav_order}
-        return _duplicate_slug_form(request, page, form, session["csrf"])
+        return _form_error(request, page, form, session["csrf"], DUPLICATE_SLUG, 409)
     conn.commit()
     return RedirectResponse(url="/admin/pages", status_code=303)
 

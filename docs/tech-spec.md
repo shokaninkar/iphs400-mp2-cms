@@ -1,6 +1,6 @@
 # Tech Spec — inkadmissions CMS
 
-**Status:** T01–T04 implemented and closed; T05–T07 planned.
+**Status:** T01–T04, T07 and #9 implemented; T05–T06 planned.
 **Source of truth for requirements:** [spec issue #1](https://github.com/shokaninkar/iphs400-mp2-cms/issues/1). This document is the engineering-facing companion — architecture and data model detail the spec issue deliberately leaves out.
 
 ## 1. Overview
@@ -41,7 +41,7 @@ Client context, vocabulary, and the decisions behind this design live in [`CONTE
 │                            SQLite (cms.db, gitignored)                      │
 │                            users, content                                   │
 └──────────────────────────────────┬──────────────────────────────────────────┘
-                                    │ cms publish (T07, planned)
+                                    │ cms publish (T07)
                                     ▼
                           site/ (static HTML, relative paths)
                                     │ cms deploy (ghp-import)
@@ -105,9 +105,10 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 | POST | `/admin/notes/{id}/delete` | admin | T03 | ✅ |
 | GET/POST | `/admin/pages*` | admin | T04 | ✅ |
 | GET | `/pages/{slug}.html` (published only, else 404) | anonymous | T04 | ✅ |
+| GET | `/notes/index.html`, `/notes/{slug}.html` (live preview of the export) | anonymous | T07 | ✅ |
 | GET | `/admin/dashboard`, list filters | admin, editor | T05 | planned |
 | GET/POST | `/admin/users*` | admin | T06 | planned |
-| — | `cms publish` CLI | — | T07 | planned (stub exists) |
+| — | `cms publish` CLI → `site/` (index, `pages/`, `notes/`, style.css) | — | T07 | ✅ |
 
 ## 7. Security
 
@@ -123,8 +124,9 @@ Route-level tests via `fastapi.testclient.TestClient`, not internal-function moc
 
 ## 9. Open questions / risks
 
-- ~~Per-module `Jinja2Templates` instances~~ — resolved in T04: `app/templating.py` holds the single instance and the `markdown` filter. Still open for T07: `app/publish.py::environment()` is a separate Jinja `Environment` without the `markdown` filter; it must register it (or share the setup) before rendering `public/page.html`.
-- T07 should own the "only published Pages, by `nav_order`" query in one place (currently inline in `app/main.py`'s `/`), and add site-wide Page navigation to `base.html` — T04 lists published Pages on the home page only.
+- ~~Per-module `Jinja2Templates` instances~~ — resolved in T04 (`app/templating.py`); the last separate `Environment`, in `app/publish.py`, was removed in T07, so the export uses the same sanitizing `markdown` filter as the admin.
+- ~~Published-content queries inline in `app/main.py`; no site-wide nav~~ — resolved in T07: `app/content.py` owns the published Pages/Notes queries for both `cms publish` and the live preview, and `base.html` renders nav from published Pages.
+- Slugs are file names in `site/`, so T07 restricts them to `[a-z0-9]` with single hyphens (`app/content.py::SAFE_SLUG`), checked on the Note/Page forms (422) and again at export.
 - ~~Duplicate slug on create/edit (Notes and Pages) raises an unhandled `sqlite3.IntegrityError` (500)~~ — resolved in T09 (#9): the form re-renders with a 409 and an error; other integrity errors still propagate.
 - The `Notes` list currently shows a fully-rendered body inline; T05's "Markdown preview" requirement may want a distinct, possibly JS-driven preview instead — worth revisiting when T05 starts.
 - Session/usage-ledger hooks (`decide()`, `spend()`) are implemented and tested, but only fire for real when Claude Code's project root is this repo — see `docs/process/compaction-log.md` for the note on why T01–T03's sessions didn't populate real ledger data.

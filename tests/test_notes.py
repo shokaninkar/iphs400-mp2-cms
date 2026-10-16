@@ -224,3 +224,21 @@ def test_duplicate_note_slug_rerenders_the_form_with_an_error(client_as, tmp_pat
     assert [(r["title"], r["slug"]) for r in rows] == [
         ("first", "first"), ("second", "second"),
     ]
+
+
+def test_unsafe_note_slug_is_rejected_on_the_form(client_as, tmp_path):
+    """T07 review: a slug becomes a file name in site/, so the form rejects one
+    that would break (or escape) the export instead of failing `cms publish`."""
+    editor = client_as("editor")
+    token = _csrf(editor)
+    for bad in ("My Note", "../evil", "UPPER"):
+        response = editor.post("/admin/notes", data={
+            "title": "Bad", "slug": bad, "body_md": "x", "csrf_token": token,
+        }, follow_redirects=False)
+        assert response.status_code == 422, bad
+        assert "Slug must be lowercase" in response.text
+    conn = get_connection(tmp_path / "test.db")
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM content").fetchone()[0] == 0
+    finally:
+        conn.close()

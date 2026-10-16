@@ -21,9 +21,11 @@ def test_public_home_answers(client):
 
 
 def test_publish_writes_a_site(tmp_path):
+    """T07 made render_site read the DB; pass a temp one so this never reads
+    (or, on a clean clone, creates) the developer's cms.db."""
     from app.publish import render_site
 
-    out = render_site(tmp_path / "site")
+    out = render_site(tmp_path / "site", db_path=tmp_path / "test.db")
     assert (out / "index.html").exists() and (out / "style.css").exists()
 
 
@@ -31,5 +33,6 @@ def test_published_html_uses_relative_paths(tmp_path):
     """Root-absolute paths break on GitHub Pages project URLs (rubric F2)."""
     from app.publish import render_site
 
-    html = (render_site(tmp_path / "site") / "index.html").read_text()
+    html = (render_site(tmp_path / "site", db_path=tmp_path / "test.db")
+            / "index.html").read_text()
     assert 'href="/' not in html and 'src="/' not in html
