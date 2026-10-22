@@ -52,6 +52,9 @@ def require_role(*roles: str):
             raise HTTPException(status_code=403, detail="Forbidden")
         return user
 
+    # S1: the marker tests/test_access_matrix.py reads off the router to find
+    # every admin-only route without a hand-written list.
+    dependency.roles = roles
     return dependency
 
 
