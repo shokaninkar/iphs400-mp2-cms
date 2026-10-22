@@ -6,8 +6,10 @@
    further attempts for that email are refused (429), even with the right
    password. The limiter is keyed on the account, not the client.
 
-The limiter's clock is frozen through `frozen_clock`; the limiter itself is
-reset between tests by the autouse `reset_login_limiter` fixture in conftest.
+`frozen_clock` passes a frozen clock in: it builds a LoginLimiter on that clock
+and hands it to the app through the `get_login_limiter` dependency. The app's
+own limiter is reset between tests by the autouse `reset_login_limiter`
+fixture in conftest.
 """
 from __future__ import annotations
 
@@ -15,7 +17,7 @@ import re
 
 import pytest
 
-from app.ratelimit import login_limiter
+from app.ratelimit import LoginLimiter, get_login_limiter
 
 ADMIN = {"email": "admin@example.test", "password": "test-admin-pw"}
 EDITOR = {"email": "editor@example.test", "password": "test-editor-pw"}
@@ -33,9 +35,10 @@ class FrozenClock:
 
 
 @pytest.fixture
-def frozen_clock(monkeypatch):
+def frozen_clock(client):
     clock = FrozenClock()
-    monkeypatch.setattr(login_limiter, "clock", clock)
+    limiter = LoginLimiter(clock=clock)
+    client.app.dependency_overrides[get_login_limiter] = lambda: limiter
     return clock
 
 

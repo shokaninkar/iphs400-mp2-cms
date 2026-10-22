@@ -120,6 +120,7 @@ Enforced by `app/deps.py::require_role(*roles)`, applied per-route, not hidden i
 - **D3 Access control:** `require_role` dependency, tested per route (T02–T06 tests); a wrong role gets 403, anonymous gets 303 to `/login`.
 - **D4 Sanitized Markdown:** `nh3.clean()` default allowlist strips `<script>` and `on*` attributes before any Note/Page body reaches a template (`app/markdown.py`). Verified directly against the library before writing app code.
 - **D5 No secrets committed:** `cms.db` and `.env` gitignored; verified via `check_submission.py`'s history grep.
+- **D6 Login hardening (MP2plus S2):** a wrong password and an unknown email get the same message and status (200). After 5 failed logins for one email within 15 minutes, `POST /login` answers 429 for that email, even with the right password, until the oldest failure is 15 minutes old. Keyed on the email, not the IP; in-memory per process (`app/ratelimit.py`). Tests: `tests/test_login_hardening.py`.
 
 ## 8. Testing strategy
 
