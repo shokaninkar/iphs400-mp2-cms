@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 from app.db import get_connection, init_db, seed_user
 from app.main import create_app
+from app.ratelimit import login_limiter
 
 # Matches scripts/seed_demo.py. Passwords come from the environment there; in
 # tests they are fixed and meaningless.
@@ -34,6 +35,15 @@ def _seed_demo_users(db_path) -> None:
             seed_user(conn, info["email"], info["password"], role)
     finally:
         conn.close()
+
+
+@pytest.fixture(autouse=True)
+def reset_login_limiter():
+    """S2: the login limiter is process-wide, so one test's failed logins
+    would otherwise lock out the next test's login."""
+    login_limiter.reset()
+    yield
+    login_limiter.reset()
 
 
 @pytest.fixture

@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 
 from app.deps import get_db, verify_csrf
+from app.ratelimit import login_limiter
 from app.security import (
     SESSION_COOKIE,
     SESSION_MAX_AGE,
@@ -38,11 +39,23 @@ def login_submit(
     password: str = Form(...),
     conn: sqlite3.Connection = Depends(get_db),
 ):
+    # S2: checked before the password, so a locked account stays locked even
+    # for the right password. Unknown emails are limited the same way, so the
+    # lockout cannot reveal which emails have accounts either.
+    if login_limiter.is_locked(email):
+        return templates.TemplateResponse(
+            request,
+            "admin/login.html",
+            {"error": "Too many failed attempts. Try again in 15 minutes."},
+            status_code=429,
+        )
+
     user = conn.execute(
         "SELECT * FROM users WHERE email = ? AND is_active = 1", (email,)
     ).fetchone()
 
     if user is None or not verify_password(password, user["password_hash"]):
+        login_limiter.record_failure(email)
         return templates.TemplateResponse(
             request,
             "admin/login.html",
